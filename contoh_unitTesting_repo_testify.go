@@ -1,90 +1,129 @@
 package repository_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"your-app/model"
-	"your-app/repository"
+	"employeeleave/model"
+	"employeeleave/repository"
 )
 
-type ProductRepositoryTestSuite struct {
+type StatusLeaveRepositoryTestSuite struct {
 	suite.Suite
 	db   *gorm.DB
-	repo repository.ProductRepository
+	repo repository.StatusLeaveRepository
 }
 
-func (suite *ProductRepositoryTestSuite) SetupTest() {
-	// Connect to a PostgreSQL test database
-	dsn := "user=username password=password dbname=testdb sslmode=disable"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		suite.T().Fatalf("error opening database: %s", err)
-	}
+func (suite *StatusLeaveRepositoryTestSuite) SetupTest() {
+	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
+	assert.NoError(suite.T(), err)
+
+	err = db.AutoMigrate(&model.StatusLeave{})
+	assert.NoError(suite.T(), err)
+
 	suite.db = db
-
-	// Migrate the database schema
-	err = db.AutoMigrate(&model.Product{})
-	if err != nil {
-		suite.T().Fatalf("error migrating database schema: %s", err)
-	}
-
-	suite.repo = repository.NewProductRepository(db)
+	suite.repo = repository.NewStatusLeaveRepository(db)
 }
 
-func (suite *ProductRepositoryTestSuite) TearDownTest() {
-	// Drop the test database table
-	err := suite.db.Migrator().DropTable(&model.Product{})
-	if err != nil {
-		suite.T().Errorf("error dropping table: %s", err)
-	}
+func (suite *StatusLeaveRepositoryTestSuite) TearDownTest() {
+	suite.db.Migrator().DropTable(&model.StatusLeave{})
 	suite.db.Close()
 }
 
-func (suite *ProductRepositoryTestSuite) TestCreateNewProduct_Success() {
-	// Create a new product
-	product := model.Product{
-		Name:  "Product A",
-		Price: 10000,
-		Uom:   model.Uom{ID: "1"},
+func (suite *StatusLeaveRepositoryTestSuite) TestCreateAndGetStatusLeave_Success() {
+	statusLeave := model.StatusLeave{
+		ID:   "1",
+		Name: "Approved",
 	}
 
-	err := suite.repo.Create(&product)
+	err := suite.repo.Create(statusLeave)
 	assert.NoError(suite.T(), err)
 
-	// Fetch the product from the database and verify its values
-	var fetchedProduct model.Product
-	err = suite.db.First(&fetchedProduct, "id = ?", product.ID).Error
+	fetchedStatusLeave, err := suite.repo.Get(statusLeave.ID)
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), product.Name, fetchedProduct.Name)
-	assert.Equal(suite.T(), product.Price, fetchedProduct.Price)
+	assert.Equal(suite.T(), statusLeave.Name, fetchedStatusLeave.Name)
 }
 
-func (suite *ProductRepositoryTestSuite) TestListProducts_Success() {
-	// Insert dummy products into the database for testing
-	dummyProducts := []model.Product{
-		{Name: "Product A", Price: 10000, Uom: model.Uom{ID: "1"}},
-		{Name: "Product B", Price: 20000, Uom: model.Uom{ID: "2"}},
+func (suite *StatusLeaveRepositoryTestSuite) TestListStatusLeaves_Success() {
+	// Insert dummy status leaves into the database for testing
+	dummyStatusLeaves := []model.StatusLeave{
+		{ID: "1", Name: "Approved"},
+		{ID: "2", Name: "Pending"},
 	}
 
-	for i := range dummyProducts {
-		err := suite.db.Create(&dummyProducts[i]).Error
+	for _, statusLeave := range dummyStatusLeaves {
+		err := suite.repo.Create(statusLeave)
 		assert.NoError(suite.T(), err)
 	}
 
-	// Retrieve the list of products
-	products, err := suite.repo.List()
+	// Retrieve the list of status leaves
+	statusLeaves, err := suite.repo.List()
 	assert.NoError(suite.T(), err)
-	assert.Len(suite.T(), products, len(dummyProducts))
+	assert.Len(suite.T(), statusLeaves, len(dummyStatusLeaves))
 }
 
-// Add more test cases as needed...
+func (suite *StatusLeaveRepositoryTestSuite) TestUpdateStatusLeave_Success() {
+	statusLeave := model.StatusLeave{
+		ID:   "1",
+		Name: "Approved",
+	}
 
-func TestProductRepositoryTestSuite(t *testing.T) {
-	suite.Run(t, new(ProductRepositoryTestSuite))
+	err := suite.repo.Create(statusLeave)
+	assert.NoError(suite.T(), err)
+
+	// Update the status leave
+	updatedStatusLeave := model.StatusLeave{
+		ID:   "1",
+		Name: "Modified",
+	}
+
+	err = suite.repo.Update(updatedStatusLeave)
+	assert.NoError(suite.T(), err)
+
+	fetchedStatusLeave, err := suite.repo.Get(statusLeave.ID)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), updatedStatusLeave.Name, fetchedStatusLeave.Name)
+}
+
+func (suite *StatusLeaveRepositoryTestSuite) TestDeleteStatusLeave_Success() {
+	statusLeave := model.StatusLeave{
+		ID:   "1",
+		Name: "Approved",
+	}
+
+	err := suite.repo.Create(statusLeave)
+	assert.NoError(suite.T(), err)
+
+	// Delete the status leave
+	err = suite.repo.Delete(statusLeave.ID)
+	assert.NoError(suite.T(), err)
+
+	// Try to fetch the deleted status leave
+	_, err = suite.repo.Get(statusLeave.ID)
+	assert.Error(suite.T(), err)
+}
+
+func (suite *StatusLeaveRepositoryTestSuite) TestUpdateStatusLeave_Fail() {
+	// Attempt to update a status leave that doesn't exist
+	updatedStatusLeave := model.StatusLeave{
+		ID:   "999",
+		Name: "Modified",
+	}
+
+	err := suite.repo.Update(updatedStatusLeave)
+	assert.Error(suite.T(), err)
+}
+
+func (suite *StatusLeaveRepositoryTestSuite) TestDeleteStatusLeave_Fail() {
+	// Attempt to delete a status leave that doesn't exist
+	err := suite.repo.Delete("999")
+	assert.Error(suite.T(), err)
+}
+
+func TestStatusLeaveRepositoryTestSuite(t *testing.T) {
+	suite.Run(t, new(StatusLeaveRepositoryTestSuite))
 }
