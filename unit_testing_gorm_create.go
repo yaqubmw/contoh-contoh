@@ -31,7 +31,7 @@ func (suite *StatusLeaveRepositorySuite) SetupTest() {
 	suite.repo = NewStatusLeaveRepository(gormDB)
 }
 
-func (suite *StatusLeaveRepositorySuite) TestCreate() {
+func (suite *StatusLeaveRepositorySuite) TestCreate_Success() {
 	payload := model.StatusLeave{
 		ID:              "1",
 		StatusLeaveName: "Pending",
@@ -43,6 +43,25 @@ func (suite *StatusLeaveRepositorySuite) TestCreate() {
 
 	err := suite.repo.Create(payload)
 	assert.NoError(suite.T(), err)
+}
+
+func (suite *StatusLeaveRepositorySuite) TestGet_Success() {
+	statusLeaveID := "1"
+	expectedStatusLeave := model.StatusLeave{
+		ID:              statusLeaveID,
+		StatusLeaveName: "Pending",
+	}
+	rows := sqlmock.NewRows([]string{"id", "status_leave_name"})
+	rows.AddRow(expectedStatusLeave.ID, expectedStatusLeave.StatusLeaveName)
+	expectedQuery := `SELECT \* FROM "status_leave" WHERE id = \$1`
+	suite.mocksql.ExpectQuery(expectedQuery).WithArgs(statusLeaveID).WillReturnRows(rows)
+
+	result, err := suite.repo.Get(statusLeaveID)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), expectedStatusLeave, result)
+
+	// Ensure all expectations were met
+	assert.NoError(suite.T(), suite.mocksql.ExpectationsWereMet())
 }
 
 
