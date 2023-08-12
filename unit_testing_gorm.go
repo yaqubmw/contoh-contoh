@@ -31,16 +31,20 @@ func (suite *StatusLeaveRepositorySuite) SetupTest() {
 	suite.repo = NewStatusLeaveRepository(gormDB)
 }
 
+func (suite *StatusLeaveRepositorySuite) TearDownTest() {
+	assert.NoError(suite.T(), suite.mocksql.ExpectationsWereMet())
+}
+
 var dataDummy = []model.StatusLeave{
-		{
-			ID:              "1",
-			StatusLeaveName: "Pending",
-		},
-		{
-			ID:              "2",
-			StatusLeaveName: "Approved",
-		},
-	}
+	{
+		ID:              "1",
+		StatusLeaveName: "Pending",
+	},
+	{
+		ID:              "2",
+		StatusLeaveName: "Approved",
+	},
+}
 
 func (suite *StatusLeaveRepositorySuite) TestCreate() {
 	payload := dataDummy[0]
@@ -65,8 +69,6 @@ func (suite *StatusLeaveRepositorySuite) TestGet() {
 	result, err := suite.repo.Get(statusLeaveID)
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), expectedStatusLeave, result)
-
-	assert.NoError(suite.T(), suite.mocksql.ExpectationsWereMet())
 }
 
 func (suite *StatusLeaveRepositorySuite) TestList() {
@@ -83,9 +85,8 @@ func (suite *StatusLeaveRepositorySuite) TestList() {
 	result, err := suite.repo.List()
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), expectedStatusLeaves, result)
-
-	assert.NoError(suite.T(), suite.mocksql.ExpectationsWereMet())
 }
+
 
 func TestStatusLeaveRepositorySuite(t *testing.T) {
 	suite.Run(t, new(StatusLeaveRepositorySuite))
