@@ -98,6 +98,18 @@ func (suite *StatusLeaveRepositorySuite) TestUpdate() {
 	assert.NoError(suite.T(), err)
 }
 
+func (suite *StatusLeaveRepositorySuite) TestDelete() {
+    statusLeaveID := "1"
+    expectedQuery := `DELETE FROM "status_leave" WHERE id = \$1`
+
+	suite.mocksql.ExpectBegin()
+    suite.mocksql.ExpectExec(expectedQuery).WithArgs(statusLeaveID).WillReturnResult(sqlmock.NewResult(0, 1))
+	suite.mocksql.ExpectCommit()
+
+    err := suite.repo.Delete(statusLeaveID)
+    assert.NoError(suite.T(), err)
+}
+
 
 func TestStatusLeaveRepositorySuite(t *testing.T) {
 	suite.Run(t, new(StatusLeaveRepositorySuite))
