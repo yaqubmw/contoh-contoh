@@ -87,6 +87,17 @@ func (suite *StatusLeaveRepositorySuite) TestList() {
 	assert.Equal(suite.T(), expectedStatusLeaves, result)
 }
 
+func (suite *StatusLeaveRepositorySuite) TestUpdate() {
+	expectedQuery := `UPDATE "status_leave" SET "id"=\$1,"status_leave_name"=\$2 WHERE "id" = \$3`
+
+	suite.mocksql.ExpectBegin()
+	suite.mocksql.ExpectExec(expectedQuery).WithArgs(dataDummy[0].ID, dataDummy[0].StatusLeaveName, dataDummy[0].ID).WillReturnResult(sqlmock.NewResult(0, 1))
+	suite.mocksql.ExpectCommit()
+
+	err := suite.repo.Update(dataDummy[0])
+	assert.NoError(suite.T(), err)
+}
+
 
 func TestStatusLeaveRepositorySuite(t *testing.T) {
 	suite.Run(t, new(StatusLeaveRepositorySuite))
