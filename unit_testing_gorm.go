@@ -110,7 +110,22 @@ func (suite *StatusLeaveRepositorySuite) TestDelete() {
     assert.NoError(suite.T(), err)
 }
 
+func (suite *StatusLeaveRepositorySuite) TestGetByNameStatus() {
+    statusLeaveName := "Pending"
+    expectedQuery := `SELECT \* FROM "status_leave" WHERE status_leave_name LIKE \$1`
+
+    rows := sqlmock.NewRows([]string{"id", "status_leave_name"}).AddRow(dataDummy[0].ID, dataDummy[0].StatusLeaveName)
+
+    suite.mocksql.ExpectQuery(expectedQuery).WithArgs("%" + statusLeaveName + "%").WillReturnRows(rows)
+
+    result, err := suite.repo.GetByNameStatus(statusLeaveName)
+    assert.NoError(suite.T(), err)
+    assert.Equal(suite.T(), dataDummy[0], result)
+
+    assert.NoError(suite.T(), suite.mocksql.ExpectationsWereMet())
+}
 
 func TestStatusLeaveRepositorySuite(t *testing.T) {
 	suite.Run(t, new(StatusLeaveRepositorySuite))
 }
+
